@@ -1,8 +1,30 @@
-// Sequelize is basically a class or constructor function exported by the sequalixe package
-const Sequelize = require('sequelize').Sequelize
+const mongodb = require('mongodb')
+const MongoClient = mongodb.MongoClient
 
-// creating an instance of sequelize and it will return a connection pool that will manage sequelize
-const sequelize = new Sequelize("online_shop", "root", "root", {dialect: 'mysql', host: "localhost"})
+let _db;
+
+const connectToMongo = (callback) => {
+    
+    MongoClient.connect("mongodb+srv://aman:u29iEWdkhXlkX7sH@primary.u62r1.mongodb.net/shop?retryWrites=true&w=majority", { 
+        useUnifiedTopology: true 
+    })
+    .then(client => {
+        console.log('Connected')
+        _db = client.db()
+        callback()
+    })
+    .catch(err => {
+        console.log('connection failed', err)
+    })
+}
 
 
-module.exports = sequelize
+const getDb = () => {
+    if (_db){
+        return _db
+    }
+    throw "No Such Database exists"
+}
+
+exports.connectToMongo = connectToMongo
+exports.getDb = getDb
