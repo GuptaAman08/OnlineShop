@@ -1,96 +1,122 @@
-const mongodb = require("mongodb")
-const { getDb } = require("../util/database")
+const mongoose = require("mongoose")
 
-class Product {
-    constructor(title, price, imageUrl, description, id, userId){
-        this.title = title,
-        this.price = price,
-        this.imageUrl = imageUrl,
-        this.description = description,
-        this._id = id ? new mongodb.ObjectID(id) : null,
-        this.userId = userId
+const Schema = mongoose.Schema
+
+const productSchema = new Schema({
+    title: {
+        type: String,
+        required: true
+    },
+    price: {
+        type: Number,
+        required: true
+    },
+    description: {
+        type: String,
+        required: true
+    },
+    imageUrl: {
+        type: String,
+        required: true
+    },
+    userId: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true
     }
+})
 
-    save = () => {
-        try {
-            const db = getDb()
-            let dbOp;
-            if (this._id){
-                dbOp = db.collection("products").updateOne(
-                    {
-                        _id: this._id
-                    }, 
-                    {
-                        $set: this 
-                    }
-                )
-            }else{
-                dbOp = db.collection("products").insertOne(this)
-            }
+module.exports = mongoose.model("Product", productSchema)
+// class Product {
+//     constructor(title, price, imageUrl, description, id, userId){
+//         this.title = title,
+//         this.price = price,
+//         this.imageUrl = imageUrl,
+//         this.description = description,
+//         this._id = id ? new mongodb.ObjectID(id) : null,
+//         this.userId = userId
+//     }
 
-            return dbOp
-                .then(result => {
-                    console.log("Inserted/Updated Successfully")
-                })
-                .catch(err => {
-                    throw err
-                })
+//     save = () => {
+//         try {
+//             const db = getDb()
+//             let dbOp;
+//             if (this._id){
+//                 dbOp = db.collection("products").updateOne(
+//                     {
+//                         _id: this._id
+//                     }, 
+//                     {
+//                         $set: this 
+//                     }
+//                 )
+//             }else{
+//                 dbOp = db.collection("products").insertOne(this)
+//             }
 
-        } catch (error) {
-            console.log('Inside Save method !!', error)
-        }
-    }
+//             return dbOp
+//                 .then(result => {
+//                     console.log("Inserted/Updated Successfully")
+//                 })
+//                 .catch(err => {
+//                     throw err
+//                 })
+
+//         } catch (error) {
+//             console.log('Inside Save method !!', error)
+//         }
+//     }
 
 
-    static fetchAll = () => {
-        try {
-            const db = getDb()
+//     static fetchAll = () => {
+//         try {
+//             const db = getDb()
 
-            return db.collection("products").find()
-                .toArray()
-                .then(products => products)
-                .catch(err => {
-                    throw err
-                })
+//             return db.collection("products").find()
+//                 .toArray()
+//                 .then(products => products)
+//                 .catch(err => {
+//                     throw err
+//                 })
         
-        } catch (error) {
-            console.log("fetchAll error ", error);
-        }
-    }
+//         } catch (error) {
+//             console.log("fetchAll error ", error);
+//         }
+//     }
 
-    static deleteById = (id) => {
-        try {
-            const db = getDb()
+//     static deleteById = (id) => {
+//         try {
+//             const db = getDb()
             
-            return db.collection("products").deleteOne({_id: new mongodb.ObjectID(id)})
-                        .then(result => {
-                            console.log(result)
-                            console.log('Deleted Successfully')
-                        })
-                        .catch(err => {
-                            console.log('DeleteById-err', err)
-                        })
+//             return db.collection("products").deleteOne({_id: new mongodb.ObjectID(id)})
+//                         .then(result => {
+//                             console.log(result)
+//                             console.log('Deleted Successfully')
+//                         })
+//                         .catch(err => {
+//                             console.log('DeleteById-err', err)
+//                         })
 
-        } catch (error) {
-            console.log( "deleteById", error)
-        }
+//         } catch (error) {
+//             console.log( "deleteById", error)
+//         }
 
-    }
+//     }
 
-    static fetchSingleProduct = (id) => {
-        try {
-            const db = getDb()
-            return db.collection("products").find({_id: new mongodb.ObjectID(id)})
-                    .next()
-                    .then(product => product)
-                    .catch(err => {
-                        throw err
-                    })
-        } catch (error) {
-            console.log( "fetchSingleProduct", error)
-        }
-    }
-}
+//     static fetchSingleProduct = (id) => {
+//         try {
+//             const db = getDb()
+//             return db.collection("products").find({_id: new mongodb.ObjectID(id)})
+//                     .next()
+//                     .then(product => product)
+//                     .catch(err => {
+//                         throw err
+//                     })
+//         } catch (error) {
+//             console.log( "fetchSingleProduct", error)
+//         }
+//     }
+// }
 
 
-module.exports = Product
+// module.exports = Product
