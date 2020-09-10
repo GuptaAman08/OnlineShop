@@ -1,4 +1,5 @@
 const Product = require('../models/product');
+const product = require('../models/product');
 
 exports.getAddProduct = (req, res, next) => {
     res.render('admin/edit-product', {
@@ -16,7 +17,7 @@ exports.getEditProduct = (req, res, next) => {
     
     const prodId = req.params.productId
 
-    Product.fetchSingleProduct(prodId)
+    Product.findById(prodId)
     .then(product => {
         if (!product){
             return res.redirect("/")
@@ -36,10 +37,11 @@ exports.postAddProduct = (req, res, next) => {
     const imageUrl = req.body.imageUrl;
     const price = req.body.price;
     const description = req.body.description;
-    const product = new Product(title, price, imageUrl, description, null, req.user._id)
+    const product = new Product({title: title, price: price, imageUrl: imageUrl , description: description, userId: req.user._id })
+    // you can just pass req.user as well instead of req.user._id bcoz mongoose can automatically pick it from user object
     product.save()
         .then((result) => {
-            //console.log( result)
+            console.log( "Product added successfully")
             res.redirect('/admin/products');
         })
         .catch(err => {
@@ -50,8 +52,9 @@ exports.postAddProduct = (req, res, next) => {
 exports.postDeleteProduct = (req, res, next) => {
     const prodId = req.body.productId
 
-    Product.deleteById(prodId)
+    Product.findByIdAndDelete(prodId)
         .then(result => {
+            console.log('Product deleted succesfully')
             res.redirect('/admin/products');
         })
         .catch(err => {
@@ -66,10 +69,17 @@ exports.postEditProduct = (req, res, next) => {
     const updatedPrice = req.body.price;
     const updatedDescription = req.body.description;
     
-    const product = new Product(updatedTitle, updatedPrice, updatedImageUrl, updatedDescription, prodId)
-    
-    product.save()
+    Product.findById(prodId)
+        .then(product => {
+            product.title = updatedTitle,
+            product.price = updatedPrice,
+            product.imageUrl = updatedImageUrl,
+            product.description = updatedDescription
+            
+            return product.save()
+        })
         .then(result => {
+            console.log("Product updated successfully")
             res.redirect('/admin/products');
         })
         .catch(err => {
@@ -78,10 +88,12 @@ exports.postEditProduct = (req, res, next) => {
 };
 
 exports.getProducts = (req, res, next) => {
-    Product.fetchAll()
-        .then(product => {
+    Product.find()
+        // .select("title price -_id") this methods helps in projectio 
+        // .populate("userId", "-_id")  first mentions the field to be filled with data and second argument mentions projection
+        .then(products => {
             res.render('admin/products', {
-                prods: product,
+                prods: products,
                 pageTitle: 'Admin Products',
                 path: '/admin/products'
             });

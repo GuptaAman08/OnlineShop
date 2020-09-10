@@ -1,11 +1,12 @@
 const Product = require('../models/product');
-//const Cart = require('../models/cart');
+const Order = require('../models/order');
+const product = require('../models/product');
 
 exports.getProducts = (req, res, next) => {
-    Product.fetchAll()
-        .then(product => {
+    Product.find()
+        .then(products => {
             res.render('shop/product-list', {
-                prods: product,
+                prods: products,
                 pageTitle: 'All Products',
                 path: '/products'
             });
@@ -17,7 +18,7 @@ exports.getProducts = (req, res, next) => {
 
 exports.getProduct = (req, res, next) => {
     const prodId = req.params.productId
-    Product.fetchSingleProduct(prodId)
+    Product.findById(prodId)
         .then((product) => {
             res.render("shop/product-detail", {product: product, pageTitle: product.title, path: "/products" })
         })
@@ -27,10 +28,10 @@ exports.getProduct = (req, res, next) => {
 };
 
 exports.getIndex = (req, res, next) => {
-    Product.fetchAll()
-        .then(product => {
+    Product.find()
+        .then(products => {
             res.render('shop/index', {
-                prods: product,
+                prods: products,
                 pageTitle: 'Shop',
                 path: '/'
             });
@@ -41,13 +42,15 @@ exports.getIndex = (req, res, next) => {
 };
 
 exports.getCart = (req, res, next) => {
-    req.user.getCart()
-    .then(products => {
-        // console.log(products)
+    req.user
+    .populate("cart.items.productId")
+    .execPopulate()
+    .then(user => {
+        // console.log( user.cart.items)
         res.render('shop/cart', {
             path: '/cart',
             pageTitle: 'Your Cart',
-            products: products
+            products: user.cart.items
         });
         
     })
@@ -72,7 +75,7 @@ exports.postDeleteCartProduct = (req, res, next) => {
 exports.postCart = (req, res, next) => {
     const productId = req.body.productId
 
-    Product.fetchSingleProduct(productId)
+    Product.findById(productId)
         .then(product => {
             return req.user.addToCart(product)
         })
@@ -81,25 +84,44 @@ exports.postCart = (req, res, next) => {
             res.redirect("/cart")
         })
         .catch(err => {
-            console.log('postCard err',err)
+            console.log('postCard err', err)
         })
 };
 
 exports.postOrder = (req, res, next) => {
-    let allProduct, fetchCart;
-    req.user.addOrder()
-        .then(result => {
-            res.redirect("/orders")
+    req.user
+    .populate("cart.items.productId")
+    .execPopulate()
+    .then(user => {
+        const products = user.cart.items.map(item => {
+            // _doc basically help you in pulling only the data and ignore the metadata in the populated field
+            return {qty: item.qty, product: { ...item.productId._doc}}
         })
-        .catch(err => {
-            console.log('postOder-err', err)
+        
+        const order = new Order({
+            products: products,
+            user: {
+                name: req.user.name,
+                userId: req.user._id
+            }
         })
+        return order.save()
+    })    
+    .then(result => {
+        return req.user.clearCart()
+    })
+    .then(result => {
+        res.redirect("/orders")
+    })
+    .catch(err => { 
+        console.log('postOder-err', err)
+    })
 }
 
 exports.getOrders = (req, res, next) => {
-    req.user.getOrders()
+    Order.find({"user.userId": req.user._id})
     .then(orders => {
-        // console.log(orders)
+        // console.log('orders', orders)
         res.render('shop/orders', {
             path: '/orders',
             pageTitle: 'Your Orders',
