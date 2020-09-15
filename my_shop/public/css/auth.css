@@ -1,0 +1,11 @@
+/* main{
+    margin: auto;
+    width: 60%;
+} */
+
+.login-form {
+    width: 20rem;
+    max-width: 90%;
+    margin: auto;
+    display: block;
+}
