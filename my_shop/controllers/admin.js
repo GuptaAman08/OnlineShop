@@ -1,12 +1,11 @@
 const Product = require('../models/product');
-const product = require('../models/product');
 
 exports.getAddProduct = (req, res, next) => {
     res.render('admin/edit-product', {
         pageTitle: 'Add Product',
         path: '/admin/add-product',
         edit: false,
-        isAuthenticated: req.isLoggedIn
+        isAuthenticated: req.session.isLoggedIn
     });
 };
 
@@ -29,7 +28,7 @@ exports.getEditProduct = (req, res, next) => {
             path: '/admin/edit-product',
             edit: editProduct,
             product: product,
-            isAuthenticated: req.isLoggedIn
+            isAuthenticated: req.session.isLoggedIn
         });
     })
 };
@@ -39,8 +38,8 @@ exports.postAddProduct = (req, res, next) => {
     const imageUrl = req.body.imageUrl;
     const price = req.body.price;
     const description = req.body.description;
-    const product = new Product({title: title, price: price, imageUrl: imageUrl , description: description, userId: req.user._id })
-    // you can just pass req.user as well instead of req.user._id bcoz mongoose can automatically pick it from user object
+    const product = new Product({title: title, price: price, imageUrl: imageUrl , description: description, userId: req.session.user._id })
+    // you can just pass req.session.user as well instead of req.session.user._id bcoz mongoose can automatically pick it from user object
     product.save()
         .then((result) => {
             console.log( "Product added successfully")
@@ -97,7 +96,7 @@ exports.getProducts = (req, res, next) => {
                 prods: products,
                 pageTitle: 'Admin Products',
                 path: '/admin/products',
-                isAuthenticated: req.isLoggedIn
+                isAuthenticated: req.session.isLoggedIn
             });
         })
         .catch(err => {
