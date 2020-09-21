@@ -25,3 +25,17 @@
 .product__description {
     text-align: center;
 }
+
+.detail_center {
+    text-align: center;
+    margin: 20px auto;
+}
+
+.detail_img img{
+    width: 30%;
+    height: 300px;
+}
+
+.detail_hr {
+    width: 70%;
+}   
