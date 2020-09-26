@@ -1,23 +1,186 @@
+// helps in creating secure, unique, random values.
+const crypto = require("crypto")
+
 const User = require('../models/user');
 const bcrypt = require("bcryptjs"); 
 
+// Uncomment below code for sending mails to new signed up user.
+const nodemailer = require('nodemailer')
+const sendgridTransport = require('nodemailer-sendgrid-transport')
 
-const ERR_MESSAGES = ["User Already Exists", "User does not exists", "Password mismatch"]
+const ERR_MESSAGES = require("../util/auth-errors")
+
+// tells nodemailer how ur mails will be delivered. 
+const transporter = nodemailer.createTransport(sendgridTransport({
+    auth: {
+        api_key: "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"
+    }
+}))
+
+
 
 exports.getLogin = (req, res, next) => {
     // const isLoggedIn = req.headers.cookie.split("=")[1] === "true"
+    let mssg = req.flash("loginError") 
+    if (mssg.length === 0){
+        mssg = null 
+    }else{
+        mssg = mssg[0]
+    }
+
     res.render("auth/login", {
         path: "/login",
-        pageTitle: "Login"
+        pageTitle: "Login",
+        errorMssg: mssg
     })    
 }
 
 exports.getSignup = (req, res, next) => {
     // const isLoggedIn = req.headers.cookie.split("=")[1] === "true"
+    let mssg = req.flash("signUpError") 
+    if (mssg.length === 0){
+        mssg = null 
+    }else{
+        mssg = mssg[0]
+    }
+    
     res.render("auth/signup", {
         path: "/signup",
-        pageTitle: "Signup"
+        pageTitle: "Signup",
+        errorMssg: mssg
     })    
+}
+
+exports.getResetPwd = (req, res, next) => {
+    let mssg = req.flash("resetPwdError") 
+    if (mssg.length === 0){
+        mssg = null 
+    }else{
+        mssg = mssg[0]
+    }
+
+    res.render("auth/reset-pwd", {
+        path: "/reset-pwd",
+        pageTitle: "Reset Password",
+        errorMssg: mssg
+    })
+}
+
+exports.getNewPwd = (req, res, next) => {
+    const token = req.params.token
+    
+    User.findOne({resetToken: token })
+    .then(user => {
+        if (!user){
+            throw "Invalid Token or session expired"
+        }
+        let mssg = req.flash("signUpError") 
+        
+        if (mssg.length === 0){
+            mssg = null 
+        }else{
+            mssg = mssg[0]
+        }
+
+        res.render("auth/new-password", {
+            path: "/new-pwd",
+            pageTitle: "New Password",
+            errorMssg: mssg,
+            userId: user._id.toString(),
+            token: token
+        })
+    })
+    .catch(err => {
+        console.log('get New Pwd', err)
+        if (ERR_MESSAGES.includes(err)){
+            req.flash("loginError", err)
+        }
+        return res.redirect("/login")
+    })    
+}
+
+exports.postNewPwd = (req, res, next) => {
+    const pwd = req.body.password
+    const userId = req.body.userId
+    const token = req.body.token
+
+    let resetUser;
+    User.findOne({ 
+        resetToken: token, 
+        // resetTokenExpireDate: { $gt: Date.now() },
+        _id: userId
+    })
+    .then(user => {
+        if (!user){
+            throw "Invalid Token or session expired"
+        }
+        resetUser = user
+        return bcrypt.hash(pwd, 12)
+    })
+    .then(hashedPassword => {
+        resetUser.password = hashedPassword
+        resetUser.resetToken = undefined
+        resetUser.resetTokenExpireDate = undefined
+        return resetUser.save()
+    })
+    .then(result => {
+        console.log('Password Updated Successfully')
+        // req.flash("")
+        return res.redirect("/login")
+    })
+    .catch(err => {
+        if (ERR_MESSAGES.includes(err)){
+            req.flash("loginError", err)
+        }
+        console.log("post New Pwd" , err)
+        return res.redirect("/login")
+    })
+}
+
+exports.postResetPwd = (req, res, next) => {
+    crypto.randomBytes(32, (err, buffer) => {
+        if (err){
+            throw "Some Error Occured. Please try again!!"
+        }
+        const token = buffer.toString("hex")
+        const email = req.body.email
+        
+        User.findOne({email: email})
+        .then(user => {
+            if (!user){
+                throw "User does not exists"
+            }
+
+            user.resetToken = token,
+            user.resetTokenExpireDate = Date.now() + 3600000;
+
+            return user.save()
+        })
+        .then(result => {
+            console.log('Token Saved')
+            return transporter.sendMail({
+                to: email,
+                from: "aman.gupta@tacto.in",
+                subject: "Password Reset",
+                html: `
+                    <p> You requested for password reset </p>
+                    <p> Click this <a href="http://localhost:3000/reset/${token}">link</a> to set a new password. </p>
+                `
+            })
+        })
+        .then(result => {
+            console.log('Pwd reset email sended successfully')
+            req.flash("success", "A password reset email has been send to your respective Email ID")
+            return res.redirect("/")
+        })
+        .catch(err => {
+            if (ERR_MESSAGES.includes(err)){
+                req.flash("resetPwdError", err)
+            }
+            console.log('post Reset Pwd error', err)
+            return res.redirect("/reset")
+        })
+    })
 }
 
 exports.postSignup = (req, res, next) => {
@@ -30,8 +193,8 @@ exports.postSignup = (req, res, next) => {
         .then((user) => {
             if (user){
                 // User already exist in DB
-                console.log('User already exists')
-                throw "User Already Exists"
+                console.log("Email ID already exists. Please use a different one")
+                throw "Email ID already exists. Please use a different one"
             }
 
             // hashing password is an async task so need to return a promise and this hash can't be decrypted
@@ -48,11 +211,22 @@ exports.postSignup = (req, res, next) => {
             return newUser.save()
         })
         .then(result => {
-            console.log('Signed Up Successfully!!!')
+            console.log('"Signed Up Successfully')
+            req.flash("loginError", "Signed Up Successfully. Please login to proceed further!!!")
             return res.redirect("/login")
+        //     return transporter.sendMail({
+        //         to: email,
+        //         from: "aman.gupta@tacto.in",
+        //         subject: "Try to hack Indresh gmail",
+        //         html: "<h1> You are Hacked </h1>"
+        //     })
+        // })
+        // .then(result => {
+        //     console.log('Mailed send Successfully')
         })
         .catch((err) => {
             if (ERR_MESSAGES.includes(err)){
+                req.flash("signUpError", err)
                 return res.redirect("/signup")
             }
             console.log('post Signup Controller error', err)
@@ -81,7 +255,7 @@ exports.postLogin = (req, res, next) => {
             storeUser = user
             if (!user){
                 console.log('User is not signed up')
-                throw "User does not exists"
+                throw "Invalid username or password"
             }
 
             return bcrypt.compare(password, user.password)
@@ -100,12 +274,13 @@ exports.postLogin = (req, res, next) => {
                     res.redirect("/")
                 })
             }else{
-                console.log("Password Mis-match")
-                throw "Password mismatch"
+                console.log("Invalid username or password")
+                throw "Invalid username or password"
             } 
         })
         .catch(err => {
             if (ERR_MESSAGES.includes(err)){
+                req.flash("loginError" ,err)
                 return res.redirect("/login")
             }
             console.log('Post Login controller error', err)
