@@ -1,0 +1,1 @@
+module.exports = ["Email ID already exists. Please use a different one", "User does not exists", "Invalid username or password", "Some Error Occured. Please try again!!", "Invalid Token or session expired", "User Not Authorized to perform this action"]
