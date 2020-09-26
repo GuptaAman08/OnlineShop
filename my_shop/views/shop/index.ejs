@@ -4,7 +4,11 @@
 
 <body>
     <%- include('../includes/navigation.ejs') %>
-
+    <% if (successFlashMssg) {%>
+        <div class="flash-message">
+            <%= successFlashMssg %> 
+        </div>
+    <% } %>
     <main>
         <% if (prods.length > 0) { %>
             <div class="grid">
