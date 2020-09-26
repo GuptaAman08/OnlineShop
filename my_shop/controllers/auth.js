@@ -69,7 +69,7 @@ exports.getResetPwd = (req, res, next) => {
 exports.getNewPwd = (req, res, next) => {
     const token = req.params.token
     
-    User.findOne({resetToken: token })
+    User.findOne({resetToken: token, resetTokenExpireDate: { $gt: Date.now() } })
     .then(user => {
         if (!user){
             throw "Invalid Token or session expired"
@@ -107,7 +107,7 @@ exports.postNewPwd = (req, res, next) => {
     let resetUser;
     User.findOne({ 
         resetToken: token, 
-        // resetTokenExpireDate: { $gt: Date.now() },
+        resetTokenExpireDate: { $gt: Date.now() },
         _id: userId
     })
     .then(user => {
