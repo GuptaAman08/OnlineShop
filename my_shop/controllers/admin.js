@@ -1,4 +1,5 @@
 const Product = require('../models/product');
+const { validationResult } = require("express-validator")
 
 const ERR_MESSAGE = require("../util/auth-errors")
 
@@ -6,7 +7,10 @@ exports.getAddProduct = (req, res, next) => {
     res.render('admin/edit-product', {
         pageTitle: 'Add Product',
         path: '/admin/add-product',
-        edit: falseÆ
+        edit: false,
+        hasError: false,
+        errorMssg: null,
+        validationMssg: []
     });
 };
 
@@ -28,7 +32,10 @@ exports.getEditProduct = (req, res, next) => {
             pageTitle: 'Edit Product',
             path: '/admin/edit-product',
             edit: editProduct,
-            product: product
+            product: product,
+            hasError: false,
+            errorMssg: null,
+            validationMssg: []
         });
     })
 };
@@ -38,6 +45,24 @@ exports.postAddProduct = (req, res, next) => {
     const imageUrl = req.body.imageUrl;
     const price = req.body.price;
     const description = req.body.description;
+    const errors = validationResult(req)
+    if (!errors.isEmpty()){
+        return res.status(422).render('admin/edit-product', {
+            pageTitle: 'Add Product',
+            path: '/admin/edit-product',
+            edit: false,
+            hasError: true,
+            product: {
+                title: title,
+                imageUrl: imageUrl,
+                description: description,
+                price: price
+            },
+            errorMssg: errors.array()[0].msg,
+            validationMssg: errors.array()
+        });
+    }
+
     const product = new Product({title: title, price: price, imageUrl: imageUrl , description: description, userId: req.user._id })
     // you can just pass req.user as well instead of req.user._id bcoz mongoose can automatically pick it from user object
     product.save()
@@ -72,6 +97,25 @@ exports.postEditProduct = (req, res, next) => {
     const updatedPrice = req.body.price;
     const updatedDescription = req.body.description;
     
+    const errors = validationResult(req)
+    if (!errors.isEmpty()){
+        return res.status(422).render('admin/edit-product', {
+            pageTitle: 'Edit Product',
+            path: '/admin/edit-product',
+            edit: true,
+            hasError: true,
+            product: {
+                title: updatedTitle,
+                imageUrl: updatedImageUrl,
+                description: updatedDescription,
+                price: updatedPrice,
+                _id: prodId
+            },
+            errorMssg: errors.array()[0].msg,
+            validationMssg: errors.array()
+        });
+    }
+
     Product.findById(prodId)
         .then(product => {
             if (product.userId.toString() !== req.user._id.toString()){

@@ -3,6 +3,7 @@ const crypto = require("crypto")
 
 const User = require('../models/user');
 const bcrypt = require("bcryptjs"); 
+const { validationResult } = require("express-validator")
 
 // Uncomment below code for sending mails to new signed up user.
 const nodemailer = require('nodemailer')
@@ -31,7 +32,12 @@ exports.getLogin = (req, res, next) => {
     res.render("auth/login", {
         path: "/login",
         pageTitle: "Login",
-        errorMssg: mssg
+        errorMssg: mssg,
+        oldInput: {
+            email: "",
+            password: ""
+        },
+        validationMssg: []
     })    
 }
 
@@ -47,7 +53,13 @@ exports.getSignup = (req, res, next) => {
     res.render("auth/signup", {
         path: "/signup",
         pageTitle: "Signup",
-        errorMssg: mssg
+        errorMssg: mssg,
+        oldInput: {
+            email: "",
+            password: "",
+            confirmPassword: ""
+        },
+        validationMssg: []
     })    
 }
 
@@ -187,50 +199,67 @@ exports.postSignup = (req, res, next) => {
     const fullName = req.body.fullName
     const email = req.body.email
     const password = req.body.password
-    const confirmPassword = req.body.confirmPassword
+    
 
-    User.findOne({email: email})
-        .then((user) => {
-            if (user){
-                // User already exist in DB
-                console.log("Email ID already exists. Please use a different one")
-                throw "Email ID already exists. Please use a different one"
-            }
+    const errors = validationResult(req)
+    if (!errors.isEmpty()){
 
-            // hashing password is an async task so need to return a promise and this hash can't be decrypted
-            // salt value basically implies the number of rounds of hashing you need 
-            return bcrypt.hash(password, 12)
+        return res.status(422).render("auth/signup", {
+                path: "/signup",
+                pageTitle: "Signup",
+                errorMssg: errors.array()[0].msg,
+                oldInput: {
+                    email: email,
+                    password: password,
+                    confirmPassword: req.body.confirmPassword
+                },
+                validationMssg: errors.array()
+            }    
+        )
+    }
+
+    // hashing password is an async task so need to return a promise and this hash can't be decrypted
+    // salt value basically implies the number of rounds of hashing you need 
+    bcrypt.hash(password, 12)
+    .then(hashedPassword => {
+        const newUser = new User({
+            name: fullName,
+            email: email, 
+            password: hashedPassword,
+            cart: { items: [] }
         })
-        .then(hashedPassword => {
-            const newUser = new User({
-                name: fullName,
-                email: email, 
-                password: hashedPassword,
-                cart: { items: [] }
+        return newUser.save()
+    })
+    .then(result => {
+        console.log('Signed Up Successfully')
+        req.flash("loginError", "Signed Up Successfully. Please login to proceed further!!!")
+        return res.redirect("/login")
+    //     return transporter.sendMail({
+    //         to: email,
+    //         from: "aman.gupta@tacto.in",
+    //         subject: "Try to hack Indresh gmail",
+    //         html: "<h1> You are Hacked </h1>"
+    //     })
+    // })
+    // .then(result => {
+    //     console.log('Mailed send Successfully')
+    })
+    .catch((err) => {
+        if (ERR_MESSAGES.includes(err)){
+            return res.status(422).render("auth/signup", {
+                path: "/signup",
+                pageTitle: "Signup",
+                errorMssg: err,
+                oldInput: {
+                    email: email,
+                    password: password,
+                    confirmPassword: req.body.confirmPassword
+                },
+                validationMssg: []
             })
-            return newUser.save()
-        })
-        .then(result => {
-            console.log('"Signed Up Successfully')
-            req.flash("loginError", "Signed Up Successfully. Please login to proceed further!!!")
-            return res.redirect("/login")
-        //     return transporter.sendMail({
-        //         to: email,
-        //         from: "aman.gupta@tacto.in",
-        //         subject: "Try to hack Indresh gmail",
-        //         html: "<h1> You are Hacked </h1>"
-        //     })
-        // })
-        // .then(result => {
-        //     console.log('Mailed send Successfully')
-        })
-        .catch((err) => {
-            if (ERR_MESSAGES.includes(err)){
-                req.flash("signUpError", err)
-                return res.redirect("/signup")
-            }
-            console.log('post Signup Controller error', err)
-        })
+        }
+        console.log('post Signup Controller error', err)
+    })
 }
 
 exports.postLogin = (req, res, next) => {
@@ -249,6 +278,21 @@ exports.postLogin = (req, res, next) => {
     //     console.log('post Login controller inside try block err', err)
     //     res.redirect("/")
     // })
+    const errors = validationResult(req)
+    if (!errors.isEmpty()){
+        return res.status(422).render("auth/login", {
+                path: "/login",
+                pageTitle: "Login",
+                errorMssg: errors.array()[0].msg,
+                oldInput: {
+                    email: email,
+                    password: password
+                },
+                validationMssg: errors.array()
+            }    
+        )
+    }
+
     let storeUser;
     User.findOne({email: email})
         .then(user => {
@@ -280,8 +324,16 @@ exports.postLogin = (req, res, next) => {
         })
         .catch(err => {
             if (ERR_MESSAGES.includes(err)){
-                req.flash("loginError" ,err)
-                return res.redirect("/login")
+                return res.status(422).render("auth/login", {
+                    path: "/login",
+                    pageTitle: "Login",
+                    errorMssg: err,
+                    oldInput: {
+                        email: email,
+                        password: password
+                    },
+                    validationMssg: []
+                })
             }
             console.log('Post Login controller error', err)
         })
