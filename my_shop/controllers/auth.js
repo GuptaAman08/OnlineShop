@@ -106,8 +106,11 @@ exports.getNewPwd = (req, res, next) => {
         console.log('get New Pwd', err)
         if (ERR_MESSAGES.includes(err)){
             req.flash("loginError", err)
+            return res.redirect("/login")
         }
-        return res.redirect("/login")
+        const error = new Error(err)
+        error.httpStatuCode = 500
+        return next(error)
     })    
 }
 
@@ -143,9 +146,11 @@ exports.postNewPwd = (req, res, next) => {
     .catch(err => {
         if (ERR_MESSAGES.includes(err)){
             req.flash("loginError", err)
+            return res.redirect("/login")
         }
-        console.log("post New Pwd" , err)
-        return res.redirect("/login")
+        const error = new Error(err)
+        error.httpStatuCode = 500
+        return next(error)
     })
 }
 
@@ -188,9 +193,11 @@ exports.postResetPwd = (req, res, next) => {
         .catch(err => {
             if (ERR_MESSAGES.includes(err)){
                 req.flash("resetPwdError", err)
+                return res.redirect("/reset")
             }
-            console.log('post Reset Pwd error', err)
-            return res.redirect("/reset")
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
         })
     })
 }
@@ -258,7 +265,10 @@ exports.postSignup = (req, res, next) => {
                 validationMssg: []
             })
         }
-        console.log('post Signup Controller error', err)
+        const error = new Error(err)
+        error.httpStatuCode = 500
+        return next(error)
+
     })
 }
 
@@ -335,14 +345,18 @@ exports.postLogin = (req, res, next) => {
                     validationMssg: []
                 })
             }
-            console.log('Post Login controller error', err)
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
         })
 }
 
 exports.postLogout = (req, res, next) => {
     req.session.destroy((err) => {
         if (err){
-            console.log('logout Controller err', err)
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
         }
         res.redirect("/")
     })

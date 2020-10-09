@@ -38,6 +38,11 @@ exports.getEditProduct = (req, res, next) => {
             validationMssg: []
         });
     })
+    .catch(err => {
+        const error = new Error(err)
+        error.httpStatuCode = 500
+        return next(error)
+    })
 };
 
 exports.postAddProduct = (req, res, next) => {
@@ -47,20 +52,7 @@ exports.postAddProduct = (req, res, next) => {
     const description = req.body.description;
     const errors = validationResult(req)
     if (!errors.isEmpty()){
-        return res.status(422).render('admin/edit-product', {
-            pageTitle: 'Add Product',
-            path: '/admin/edit-product',
-            edit: false,
-            hasError: true,
-            product: {
-                title: title,
-                imageUrl: imageUrl,
-                description: description,
-                price: price
-            },
-            errorMssg: errors.array()[0].msg,
-            validationMssg: errors.array()
-        });
+        return redirect("/500")
     }
 
     const product = new Product({title: title, price: price, imageUrl: imageUrl , description: description, userId: req.user._id })
@@ -71,13 +63,25 @@ exports.postAddProduct = (req, res, next) => {
             res.redirect('/admin/products');
         })
         .catch(err => {
-            console.log('postAddProduct_err', err)
+            return res.status(422).render('admin/edit-product', {
+                pageTitle: 'Add Product',
+                path: '/admin/add-product',
+                edit: false,
+                hasError: true,
+                product: {
+                    title: title,
+                    imageUrl: imageUrl,
+                    description: description,
+                    price: price
+                },
+                errorMssg: errors.array()[0].msg,
+                validationMssg: errors.array()
+            });
         })
 };
 
 exports.postDeleteProduct = (req, res, next) => {
     const prodId = req.body.productId
-
 
     Product.deleteOne({_id: prodId, userId: req.user._id})
         .then(result => {
@@ -85,9 +89,10 @@ exports.postDeleteProduct = (req, res, next) => {
             res.redirect('/admin/products');
         })
         .catch(err => {
-            console.log("postDeleteProduct", err)
-            return res.redirect("/")
-        })  
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
+        })
 };
 
 exports.postEditProduct = (req, res, next) => {
@@ -132,8 +137,9 @@ exports.postEditProduct = (req, res, next) => {
             res.redirect('/admin/products');
         })
         .catch(err => {
-            console.log('postEditProduct_err', err)
-            return res.redirect("/")
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
         })
 };
 
@@ -149,6 +155,8 @@ exports.getProducts = (req, res, next) => {
             });
         })
         .catch(err => {
-            console.log(err)
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
         })
 };

@@ -11,7 +11,9 @@ exports.getProducts = (req, res, next) => {
             });
         })
         .catch(err => {
-            console.log(err)
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
         })
 };
 
@@ -26,7 +28,9 @@ exports.getProduct = (req, res, next) => {
             })
         })
         .catch(err => {
-            console.log(err)
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
         })
 };
 
@@ -49,7 +53,9 @@ exports.getIndex = (req, res, next) => {
             });
         })
         .catch(err => {
-            console.log(err)
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
         })
 };
 
@@ -67,7 +73,9 @@ exports.getCart = (req, res, next) => {
         
     })
     .catch(err => {
-        console.log(err)
+        const error = new Error(err)
+        error.httpStatuCode = 500
+        return next(error)
     })
 };
 
@@ -80,7 +88,9 @@ exports.postDeleteCartProduct = (req, res, next) => {
             res.redirect("/cart")
         })
         .catch(err => {
-            console.log("Delete Card Product error", err)
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
         })
 }
 
@@ -96,7 +106,9 @@ exports.postCart = (req, res, next) => {
             res.redirect("/cart")
         })
         .catch(err => {
-            console.log('postCard err', err)
+            const error = new Error(err)
+            error.httpStatuCode = 500
+            return next(error)
         })
 };
 
@@ -127,7 +139,9 @@ exports.postOrder = (req, res, next) => {
         res.redirect("/orders")
     })
     .catch(err => { 
-        console.log('postOder-err', err)
+        const error = new Error(err)
+        error.httpStatuCode = 500
+        return next(error)
     })
 }
 
@@ -143,7 +157,9 @@ exports.getOrders = (req, res, next) => {
         });
     })
     .catch(err => {
-        console.log('getOrders-err', err)
+        const error = new Error(err)
+        error.httpStatuCode = 500
+        return next(error)
     })
 };
 
@@ -151,6 +167,6 @@ exports.getCheckout = (req, res, next) => {
     res.render('shop/checkout', {
         path: '/checkout',
         pageTitle: 'Checkout',
-        
+
     });
 };
