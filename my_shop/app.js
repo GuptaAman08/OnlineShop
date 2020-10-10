@@ -2,6 +2,7 @@ const path = require('path');
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const multer = require('multer');
 const session = require('express-session');
 const csrf = require("csurf")
 const MongoDBStore = require('connect-mongodb-session')(session);
@@ -19,15 +20,35 @@ const store = new MongoDBStore({
     collection: "sessionStore"
 })
 
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "images")
+    },
+    filename: function (req, file, cb) {
+        cb(null, new Date().toISOString().replace(/:/g, '-') + "-" + file.originalname)
+    }
+})
+
+const fileFilter = (req, file, cb) => {
+    if ( file.mimetype === "image/jpeg" || file.mimetype === "image/jpg" || file.mimetype === "image/png" ){
+        // Pass true to accept only images of particuar type else pass false
+        cb(null, true)
+    }else{
+        cb(null, false)
+    }
+}
+
 app.set('view engine', 'ejs');
 app.set('views', 'views');
 
-const adminRoutes = require('./routes/admin');
 const shopRoutes = require('./routes/shop');
+const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(multer({ storage: storage, fileFilter: fileFilter}).single("image"));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use("/images", express.static(path.join(__dirname, 'images')));
 app.use(session({secret: "ShouldBeABigString", resave: false, saveUninitialized: false, store: store}));
 app.use(csrf())
 app.use(flash())
@@ -49,11 +70,12 @@ app.use((req, res, next) => {
         if (!user){
             return next()
         }
+        // console.log('Sucess')
         req.user = user
         next()
     })
     .catch(err => {
-        // console.log('Post Login controller error', err)
+        console.log('Post Login controller error', err)
         next(new Error(err))
     })
 })
