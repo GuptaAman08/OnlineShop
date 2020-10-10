@@ -18,7 +18,7 @@ router.get('/products', authMiddleware, adminController.getProducts);
 router.get('/edit-product/:productId', authMiddleware, adminController.getEditProduct);
 
 // /admin/add-product => POST
-router.post('/add-product',     
+router.post('/add-product',
     [
         body("title")
             .isString()
@@ -26,9 +26,6 @@ router.post('/add-product',
                 min: 3
             })
             .trim(),
-        
-        body("imageUrl")
-            .isURL(),
         
         body("price")
             .isFloat(),
@@ -55,9 +52,6 @@ router.post('/edit-product',
             })
             .trim(),
         
-        body("imageUrl")
-            .isURL(),
-        
         body("price")
             .isFloat(),
 
@@ -74,6 +68,6 @@ router.post('/edit-product',
 );
 
 // /admin/delete-product
-router.post('/delete-product', authMiddleware, adminController.postDeleteProduct);
+router.delete('/product/:productId', authMiddleware, adminController.deleteProduct);
 
 module.exports = router;

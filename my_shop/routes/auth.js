@@ -2,6 +2,7 @@ const express = require('express');
 const { check, body } = require('express-validator/check')
 
 const authController = require('../controllers/auth');
+const authMiddleware = require("../middleware/is-auth")
 
 const router = express.Router();
 const User = require('../models/user');
@@ -35,7 +36,7 @@ router.post("/login",
     ], 
     authController.postLogin)
 
-router.post("/logout", authController.postLogout)
+router.post("/logout", authMiddleware, authController.postLogout)
 
 router.post(
     "/signup", 

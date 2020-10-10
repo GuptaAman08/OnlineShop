@@ -1,5 +1,6 @@
 const Product = require('../models/product');
 const { validationResult } = require("express-validator")
+const { deleteFile } = require("../util/file-delete")
 
 const ERR_MESSAGE = require("../util/auth-errors")
 
@@ -47,13 +48,28 @@ exports.getEditProduct = (req, res, next) => {
 
 exports.postAddProduct = (req, res, next) => {
     const title = req.body.title;
-    const imageUrl = req.body.imageUrl;
+    const image = req.file;
     const price = req.body.price;
     const description = req.body.description;
     const errors = validationResult(req)
-    if (!errors.isEmpty()){
-        return redirect("/500")
+
+
+    if (!errors.isEmpty() || !image){
+        return res.status(422).render('admin/edit-product', {
+            pageTitle: 'Add Product',
+            path: '/admin/add-product',
+            edit: false,
+            hasError: true,
+            product: {
+                title: title,
+                description: description,
+                price: price
+            },
+            errorMssg:  !image ? "Attached file is not an image" : errors.array()[0].msg,
+            validationMssg: !image ? [] : errors.array()
+        });
     }
+    const imageUrl = "/" + image.path
 
     const product = new Product({title: title, price: price, imageUrl: imageUrl , description: description, userId: req.user._id })
     // you can just pass req.user as well instead of req.user._id bcoz mongoose can automatically pick it from user object
@@ -63,42 +79,44 @@ exports.postAddProduct = (req, res, next) => {
             res.redirect('/admin/products');
         })
         .catch(err => {
-            return res.status(422).render('admin/edit-product', {
-                pageTitle: 'Add Product',
-                path: '/admin/add-product',
-                edit: false,
-                hasError: true,
-                product: {
-                    title: title,
-                    imageUrl: imageUrl,
-                    description: description,
-                    price: price
-                },
-                errorMssg: errors.array()[0].msg,
-                validationMssg: errors.array()
-            });
-        })
-};
-
-exports.postDeleteProduct = (req, res, next) => {
-    const prodId = req.body.productId
-
-    Product.deleteOne({_id: prodId, userId: req.user._id})
-        .then(result => {
-            console.log('Product deleted succesfully')
-            res.redirect('/admin/products');
-        })
-        .catch(err => {
             const error = new Error(err)
             error.httpStatuCode = 500
             return next(error)
         })
 };
 
+exports.deleteProduct = (req, res, next) => {
+    const prodId = req.params.productId
+
+    Product.findById(prodId)
+    .then(prod => {
+        if (!prod){
+            return next(new Error("No such product exists"))
+        }
+        deleteFile(prod.imageUrl)
+        return Product.deleteOne({_id: prodId, userId: req.user._id})
+    })
+    .then(result => {
+        // console.log('Product deleted succesfully')
+        // res.redirect('/admin/products');
+        return res.status(200).json({
+            message: "Success !!"
+        })
+    })
+    .catch(err => {
+        // const error = new Error(err)
+        // error.httpStatuCode = 500
+        // return next(error)
+        res.status(500).json({
+            message: "Product deletion failed"    
+        })
+    })
+};
+
 exports.postEditProduct = (req, res, next) => {
     const prodId = req.body.productId
     const updatedTitle = req.body.title;
-    const updatedImageUrl = req.body.imageUrl;
+    const image = req.file;
     const updatedPrice = req.body.price;
     const updatedDescription = req.body.description;
     
@@ -111,7 +129,6 @@ exports.postEditProduct = (req, res, next) => {
             hasError: true,
             product: {
                 title: updatedTitle,
-                imageUrl: updatedImageUrl,
                 description: updatedDescription,
                 price: updatedPrice,
                 _id: prodId
@@ -126,9 +143,12 @@ exports.postEditProduct = (req, res, next) => {
             if (product.userId.toString() !== req.user._id.toString()){
                 throw "User Not Authorized to perform this action"
             }
-            product.title = updatedTitle,
-            product.price = updatedPrice,
-            product.imageUrl = updatedImageUrl,
+            product.title = updatedTitle
+            product.price = updatedPrice
+            if (image){
+                deleteFile(product.imageUrl)
+                product.imageUrl = `\\`+ `${image.path}`
+            }
             product.description = updatedDescription
             return product.save()
         })
