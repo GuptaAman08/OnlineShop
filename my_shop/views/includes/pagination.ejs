@@ -1,0 +1,7 @@
+<section class="pagination">
+    <span class="<%= hasPreviousPage ? '' : 'isDisabled' %>"> <a href="<%= currentUrl %>?page=<%= previousPage %>" aria-disabled="<%=!hasPreviousPage%>"><</a> </span>
+
+    <a href="<%= currentUrl %>?page=<%= previousPage + 1 %>" class="active"> <%= previousPage + 1 %> </a>
+
+    <span class="<%= hasNextPage ? '' : 'isDisabled' %>"> <a href="<%= currentUrl %>?page=<%= nextPage %>" aria-disabled="<%=!hasNextPage%>">></a> </span>
+</section>

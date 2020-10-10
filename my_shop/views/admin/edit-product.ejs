@@ -11,14 +11,18 @@
         </div>
     <% } %>
     <main>
-    <form class="product-form" action="/admin/<% if(edit) { %>edit-product<% } else { %>add-product<% } %>" method="POST">
+    <form class="product-form" action="/admin/<% if(edit) { %>edit-product<% } else { %>add-product<% } %>" method="POST" enctype="multipart/form-data">
             <div class="form-control">
                 <label for="title">Title</label>
                 <input class="<%= validationMssg.find(ele => ele.param === "title") ? 'invalid' : '' %>" type="text" name="title" id="title" value="<% if(edit || hasError) { %><%= product.title %><% } %>">
             </div>
-            <div class="form-control">
+            <!-- <div class="form-control">
                 <label for="imageUrl">Image URL</label>
-                <input class="<%= validationMssg.find(ele => ele.param === "imageUrl") ? 'invalid' : '' %>" type="text" name="imageUrl" id="imageUrl" value="<% if(edit || hasError) { %><%= product.imageUrl %><% } %>" >
+                <input class="" name="imageUrl" id="imageUrl" type="text">
+            </div> -->
+            <div class="form-control">
+                <label for="image">Image</label>
+                <input type="file" name="image" id="image">
             </div>
             <div class="form-control">
                 <label for="price">Price</label>

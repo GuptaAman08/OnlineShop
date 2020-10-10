@@ -22,7 +22,7 @@
                                 alt="<%= product.title %>">
                         </div>
                         <div class="card__content">
-                            <h2 class="product__price">$ <%= product.price %></h2>
+                            <h2 class="product__price">$<%= product.price %></h2>
                             <p class="product__description"><%= product.description %></p>
                         </div>
                         <div class="card__actions">
@@ -34,8 +34,31 @@
                     </article>
                 <% } %>
             </div>
+            <%- include("../includes/pagination.ejs", {hasPreviousPage: hasPreviousPage, hasNextPage: hasNextPage, previousPage: previousPage, nextPage: nextPage, currentUrl: currentUrl }) %> 
+
         <% } else { %>
             <h1>No Products Found!</h1>
         <% } %>
     </main>
+    <script>
+    //     function disableLink(link) {
+    //         // 1. Add isDisabled class to parent span
+    //         link.parentElement.classList.add('isDisabled');
+    //         // 2. Store href so we can add it later
+    //         link.setAttribute('data-href', link.href);
+    //         // 3. Remove href
+    //         link.href = '';
+    //         // 4. Set aria-disabled to 'true'
+    //         link.setAttribute('aria-disabled', 'true');
+    //     }
+
+    //     function enableLink(link) {
+    //         // 1. Remove 'isDisabled' class from parent span
+    //         link.parentElement.classList.remove('isDisabled');
+    //         // 2. Set href
+    //         link.href = link.getAttribute('data-href');
+    //         // 3. Remove 'aria-disabled', better than setting to false
+    //         link.removeAttribute('aria-disabled');
+    //     }
+    // </script>
 <%- include('../includes/end.ejs') %>
