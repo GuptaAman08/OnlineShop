@@ -1,26 +1,60 @@
+const fs = require('fs');
+const path = require('path');
+const PDFDocument = require('pdfkit') 
+
 const Product = require('../models/product');
 const Order = require('../models/order');
+const { getBaseUrl } = require("../util/get-url")
+
+const ITEMS_PER_PAGE = 3
 
 exports.getProducts = (req, res, next) => {
-    Product.find()
-        .then(products => {
-            res.render('shop/product-list', {
-                prods: products,
-                pageTitle: 'All Products',
-                path: '/products'
-            });
-        })
-        .catch(err => {
-            const error = new Error(err)
-            error.httpStatuCode = 500
-            return next(error)
-        })
+    const pageNo = +req.query.page || 1 
+    let totalCount, mainUrlPart = getBaseUrl(req.originalUrl);
+
+    let mssg = req.flash("success") 
+    if (mssg.length === 0){
+        mssg = null 
+    }else{
+        mssg = mssg[0]
+    }
+    
+    Product.find().countDocuments()
+    .then((count) => {
+        totalCount = count
+        
+        return Product.find()
+        .skip((pageNo - 1) * ITEMS_PER_PAGE)
+        .limit(ITEMS_PER_PAGE)
+    })
+    .then(products => {
+        
+        res.render('shop/product-list', {
+            prods: products,
+            pageTitle: 'Products',
+            path: '/products',
+            successFlashMssg: mssg,
+            totalProducts: totalCount,
+            hasNextPage: ( ITEMS_PER_PAGE * pageNo ) < totalCount,
+            hasPreviousPage: pageNo > 1,
+            nextPage: pageNo + 1,
+            previousPage: pageNo - 1,
+            lastPage: Math.ceil(totalCount / ITEMS_PER_PAGE),
+            currentUrl: mainUrlPart
+        });
+    })
+    .catch(err => {
+        const error = new Error(err)
+        error.httpStatuCode = 500
+        return next(error)
+    })
 };
 
 exports.getProduct = (req, res, next) => {
     const prodId = req.params.productId
     Product.findById(prodId)
         .then((product) => {
+            console.log(product.title)
             res.render("shop/product-detail", {
                 product: product,
                 pageTitle: product.title,
@@ -35,7 +69,10 @@ exports.getProduct = (req, res, next) => {
 };
 
 exports.getIndex = (req, res, next) => {
-    // console.log(`${req.user instanceof User}`)
+    const pageNo = +req.query.page || 1 
+    let totalCount, mainUrlPart = getBaseUrl(req.originalUrl);;
+    
+
     let mssg = req.flash("success") 
     if (mssg.length === 0){
         mssg = null 
@@ -43,20 +80,42 @@ exports.getIndex = (req, res, next) => {
         mssg = mssg[0]
     }
 
-    Product.find()
-        .then(products => {
-            res.render('shop/index', {
-                prods: products,
-                pageTitle: 'Shop',
-                path: '/',
-                successFlashMssg: mssg
-            });
-        })
-        .catch(err => {
-            const error = new Error(err)
-            error.httpStatuCode = 500
-            return next(error)
-        })
+    Product.find().countDocuments()
+    .then((count) => {
+        totalCount = count
+
+        return Product.find()
+            .skip((pageNo - 1) * ITEMS_PER_PAGE)
+            .limit(ITEMS_PER_PAGE)
+    })
+    .then(products => {
+        // let hasNextPage = ( ITEMS_PER_PAGE * pageNo ) < totalCount
+        // let hasPreviousPage = pageNo > 1
+        // let nextPage = pageNo + 1
+        // let previousPage = pageNo - 1
+        // let lastPage = Math.ceil(totalCount / ITEMS_PER_PAGE)
+
+        // console.log(hasNextPage, hasPreviousPage, nextPage, previousPage, lastPage)
+        res.render('shop/index', {
+            prods: products,
+            pageTitle: 'Shop',
+            path: '/',
+            successFlashMssg: mssg,
+            totalProducts: totalCount,
+            hasNextPage: ( ITEMS_PER_PAGE * pageNo ) < totalCount,
+            hasPreviousPage: pageNo > 1,
+            nextPage: pageNo + 1,
+            previousPage: pageNo - 1,
+            lastPage: Math.ceil(totalCount / ITEMS_PER_PAGE),
+            currentUrl: mainUrlPart
+        });
+    })
+    .catch(err => {
+        console.log('Inside index controller', err)
+        const error = new Error(err)
+        error.httpStatuCode = 500
+        return next(error)
+    })
 };
 
 exports.getCart = (req, res, next) => {
@@ -169,4 +228,67 @@ exports.getCheckout = (req, res, next) => {
         pageTitle: 'Checkout',
 
     });
+};
+
+exports.getInvoice = (req, res, next) => {
+    const orderId = req.params.orderId
+
+    Order.findById(orderId)
+    .then(order => {
+        if (!order){
+            return next(new Error("No order found!!!"))
+        }
+
+        if (order.user.userId.toString() !== req.user._id.toString()){
+            return next("You are not allowed to download this invoice")
+        }
+
+        const invoiceName = "invoice-" + orderId + ".pdf"
+        const invoicePath = path.join("data", "Invoices", invoiceName)
+
+        // This pdfDoc is a readable stream
+        const pdfDoc = new PDFDocument();
+
+        res.setHeader('Content-Type', 'application/pdf')
+        res.setHeader('Content-Disposition', 'inline; filename="' + invoiceName + '"')
+
+        // The below line ensures to save a copy of this pdf in our file system as well
+        pdfDoc.pipe(fs.createWriteStream(invoicePath))
+        pdfDoc.pipe(res)
+
+        // This allows to write a line of text in PDF Document
+        pdfDoc.fontSize(25).text("Invoice", {
+            align: "center"
+        })
+
+        pdfDoc.text("--------------------------------------------------------")
+        pdfDoc.moveDown(2);
+
+        let totalPrice = 0
+        order.products.forEach(prod => {
+            totalPrice += (prod.qty * prod.product.price)
+            pdfDoc.fontSize(12).text(`${prod.product.title}-${prod.qty} x $${prod.product.price}`)
+        });
+        pdfDoc.moveDown();
+        pdfDoc.text("------------------")
+        pdfDoc.fontSize(18).text(`Total Price $${totalPrice}`)
+
+        // When this line gets executed the file will be written to our filesystem and the response will be send. 
+        pdfDoc.end()
+
+
+        
+
+        // Use the below commented code for allow downloading a stored pdf in your file system. 
+        // const fileReadStream = fs.createReadStream(invoicePath)
+        // res.setHeader('Content-Type', 'application/pdf')
+
+        // use attachment inside of inline for directly downloading the pdf file instead of displaying it as web package and then leeting user to download them on their own.
+        //  res.setHeader('Content-Disposition', 'inline; filename="' + invoiceName + '"')
+
+        // fileReadStream.pipe(res)
+    })
+    .catch(err => {
+        return next(err)
+    })
 };
