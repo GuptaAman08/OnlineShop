@@ -14,10 +14,9 @@ const ERR_MESSAGES = require("../util/auth-errors")
 // tells nodemailer how ur mails will be delivered. 
 const transporter = nodemailer.createTransport(sendgridTransport({
     auth: {
-        api_key: "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"
+        api_key: process.env.SEND_GRID_API_KEY
     }
 }))
-
 
 
 exports.getLogin = (req, res, next) => {
