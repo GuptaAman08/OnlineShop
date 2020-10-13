@@ -15,9 +15,15 @@ router.get('/products/:productId', shopController.getProduct);
 
 router.get('/cart', authMiddleware, shopController.getCart);
 
-router.post('/cart', authMiddleware, shopController.postCart);
+router.get('/checkout', authMiddleware, shopController.getCheckout);
 
-router.post('/create-order', authMiddleware, shopController.postOrder);
+router.post('/confirm-payment-success-from-stripe-webhook', authMiddleware, shopController.postConfirmPayment)
+
+router.get('/checkout/success', authMiddleware, shopController.postOrder);
+
+router.get('/checkout/cancel', authMiddleware, shopController.getCheckout);
+
+router.post('/cart', authMiddleware, shopController.postCart);
 
 router.post('/cart-delete-item', authMiddleware, shopController.postDeleteCartProduct);
 

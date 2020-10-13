@@ -1,12 +1,15 @@
 const fs = require('fs');
 const path = require('path');
-const PDFDocument = require('pdfkit') 
+const PDFDocument = require('pdfkit')
+
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 
 const Product = require('../models/product');
 const Order = require('../models/order');
 const { getBaseUrl } = require("../util/get-url")
 
 const ITEMS_PER_PAGE = 3
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET_KEY
 
 exports.getProducts = (req, res, next) => {
     const pageNo = +req.query.page || 1 
@@ -222,12 +225,65 @@ exports.getOrders = (req, res, next) => {
     })
 };
 
-exports.getCheckout = (req, res, next) => {
-    res.render('shop/checkout', {
-        path: '/checkout',
-        pageTitle: 'Checkout',
+exports.postConfirmPayment = (req, res, next) => {
+    const payload = req.body;
+    const sig = req.headers['stripe-signature'];
 
-    });
+    console.log('Inside Confirm Payment', payload)
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(payload, sig, endpointSecret);
+    } catch (err) {
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    console.log("Got payload: ");
+    console.log(JSON.parse(payload))
+    res.status(200);
+} 
+
+exports.getCheckout = (req, res, next) => {
+    let products, totalAmt = 0;
+
+    req.user
+    .populate("cart.items.productId")
+    .execPopulate()
+    .then(user => {
+        products = user.cart.items
+        products.forEach(prod => {
+            totalAmt += prod.qty * prod.productId.price
+        });
+
+        return stripe.checkout.sessions.create({
+            payment_method_types: ['card'], //accept credit card payments.
+            line_items: products.map(p => {
+                return {
+                    name: p.productId.title,
+                    description: p.productId.description,
+                    amount: p.productId.price * 100,
+                    currency: "usd",
+                    quantity: p.qty
+                }
+            }),
+            success_url: req.protocol + "://" + req.get("host") + "/checkout/success", // http + :// + localhost:3000 + /checkout/success
+            cancel_url: req.protocol + "://" + req.get("host") + "/checkout/cancel",
+        });    
+    })
+    .then(session => {
+        res.render('shop/checkout', {
+            path: '/checkout',
+            pageTitle: 'Checkout',
+            products: products,
+            totalAmt: totalAmt,
+            sessionId: session.id
+        });
+    })
+    .catch(err => {
+        const error = new Error(err)
+        error.httpStatuCode = 500
+        return next(error)
+    })
 };
 
 exports.getInvoice = (req, res, next) => {
