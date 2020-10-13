@@ -19,10 +19,11 @@
                 </ul>
                 <hr>
                 <div style="text-align-last: center;">
-                    <form action="/create-order" method="post">
+                    <!-- <form action="/create-order" method="post">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <button type="submit" class="btn">Order Now</button>
-                    </form>
+                    </form> -->
+                    <a href="/checkout" class="btn"> Order Now </a>
                 </div>
             <% } else { %> 
                 <h2> No Products in Cart </h2>
