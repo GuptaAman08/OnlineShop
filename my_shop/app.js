@@ -1,5 +1,4 @@
 const path = require('path');
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const multer = require('multer');
@@ -12,11 +11,14 @@ const errorController = require('./controllers/error');
 const mongoose = require("mongoose")
 const User = require('./models/user');
 
-const MONGODB_CON_STRING = "mongodb+srv://aman:snZ5L0a4JMbsXqWG@primary.u62r1.mongodb.net/shop"
+// You need to import just here the dotenv package and you are good to use env variable anywhere in your app 
+require('dotenv').config()
+
+const mongodb_con_string = process.env.MONGODB_CON_STRING
 
 const app = express();
 const store = new MongoDBStore({
-    uri: MONGODB_CON_STRING,
+    uri: mongodb_con_string,
     collection: "sessionStore"
 })
 
@@ -45,7 +47,8 @@ const shopRoutes = require('./routes/shop');
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.raw({type: 'application/json'}))
+app.use(bodyParser.urlencoded({ extended: false }))
 app.use(multer({ storage: storage, fileFilter: fileFilter}).single("image"));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use("/images", express.static(path.join(__dirname, 'images')));
@@ -95,7 +98,7 @@ app.use((error, req, res, next) => {
 
 
 mongoose
-    .connect(MONGODB_CON_STRING, {useUnifiedTopology: true, useNewUrlParser: true})
+    .connect(mongodb_con_string, {useUnifiedTopology: true, useNewUrlParser: true})
     .then(result => {
         console.log("Connected")
         app.listen(3000)
