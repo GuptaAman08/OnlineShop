@@ -1,4 +1,7 @@
 const path = require('path');
+const fs = require('fs');
+const https = require("https")
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const multer = require('multer');
@@ -6,6 +9,9 @@ const session = require('express-session');
 const csrf = require("csurf")
 const MongoDBStore = require('connect-mongodb-session')(session);
 const flash = require("connect-flash")
+const helmet = require("helmet")
+const compression = require("compression")
+const morgan = require("morgan")
 
 const errorController = require('./controllers/error');
 const mongoose = require("mongoose")
@@ -21,6 +27,9 @@ const store = new MongoDBStore({
     uri: mongodb_con_string,
     collection: "sessionStore"
 })
+
+// const privateKey = fs.readFileSync('server.key')
+// const certificate = fs.readFileSync('server.cert')
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -46,6 +55,12 @@ app.set('views', 'views');
 const shopRoutes = require('./routes/shop');
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
+
+const logFileStream = fs.createWriteStream(path.join(__dirname, "log-file.log"), { flags: "a" })
+
+app.use(helmet())
+app.use(compression()) //even thought your hosting provider does not offer compression, we have done here for css and js files
+app.use(morgan("combined", {stream: logFileStream}))
 
 app.use(bodyParser.raw({type: 'application/json'}))
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -101,7 +116,10 @@ mongoose
     .connect(mongodb_con_string, {useUnifiedTopology: true, useNewUrlParser: true})
     .then(result => {
         console.log("Connected")
-        app.listen(3000)
+        // https
+        //     .createServer({ key: privateKey, cert: certificate }, app)
+        //     .listen(process.env.PORT || 3000)
+        app.listen(process.env.PORT || 3000)
     })
     .catch(err => {
         console.log('Connection Error ', err)

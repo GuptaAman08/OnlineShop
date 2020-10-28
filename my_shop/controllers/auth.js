@@ -176,7 +176,7 @@ exports.postResetPwd = (req, res, next) => {
             console.log('Token Saved')
             return transporter.sendMail({
                 to: email,
-                from: "aman.gupta@tacto.in",
+                from: "2015aman.a@ves.ac.in",
                 subject: "Password Reset",
                 html: `
                     <p> You requested for password reset </p>
